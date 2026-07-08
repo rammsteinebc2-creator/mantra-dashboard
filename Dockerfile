@@ -35,7 +35,7 @@ EXPOSE 3001
 ENV NODE_ENV=production
 
 # Comando para ejecutar el backend
-CMD ["node", "backend/index.js"]
+CMD sh -c "cd backend && npx prisma migrate deploy && node index.js"
 
 # Mostrar contenido del directorio para depuración
 RUN ls -la /app/backend
