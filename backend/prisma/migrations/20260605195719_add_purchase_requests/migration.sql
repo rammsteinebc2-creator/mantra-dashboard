@@ -1,0 +1,26 @@
+-- CreateTable
+CREATE TABLE "PurchaseRequest" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "solicitante" TEXT NOT NULL,
+    "proyecto" TEXT NOT NULL,
+    "material" TEXT NOT NULL,
+    "dibujo" TEXT,
+    "ancho" REAL,
+    "largo" REAL,
+    "grosor" REAL,
+    "diametro" REAL,
+    "fechaRequerida" DATETIME NOT NULL,
+    "descripcion" TEXT,
+    "numeroPiezas" INTEGER NOT NULL,
+    "directriz" TEXT NOT NULL DEFAULT 'esperar',
+    "proveedor1" TEXT,
+    "proveedor2" TEXT,
+    "proveedor3" TEXT,
+    "proveedorElegido" TEXT,
+    "dimensionesCotizadas" TEXT,
+    "propuestaAlternativa" TEXT,
+    "tiempoEntrega" TEXT,
+    "fechaCompra" DATETIME,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);

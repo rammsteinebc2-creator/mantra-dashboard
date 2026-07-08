@@ -1,0 +1,168 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "debian-openssl-1.1.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Empresa {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  direccion String?
+  telefono  String?
+  email     String?
+  clientes  Cliente[]
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // hash almacenado
+  nombre    String?
+   rol       String   @default("usuario") // "admin", "ventas", "facturacion", "almacen", "compras", "produccion", "supervisor"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  empresaId Int
+  empresa   Empresa  @relation(fields: [empresaId], references: [id])
+  telefono  String?
+  email     String?
+  direccion String?
+  ordenes   OrdenTrabajo[]
+  ventas    Venta[]
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Modelo: Material (inventario)
+model Material {
+  id        Int    @id @default(autoincrement())
+  nombre    String @unique
+  stock     Int    @default(0) // cantidad disponible
+  unidad    String // ej: "kg", "unidades", "metros"
+  bajoStock Int?   // stock mínimo para alerta
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Modelo: Máquina/Herramienta
+model Maquina {
+  id        Int    @id @default(autoincrement())
+  nombre    String @unique
+  descripcion String?
+  disponible Boolean @default(true)
+  asignaciones AsignacionMaquina[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Modelo: Orden de Trabajo
+model OrdenTrabajo {
+  id          Int      @id @default(autoincrement())
+  numeroOrden String   @unique
+  clienteId   Int
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  pieza       String
+  cantidad    Int
+  fechaInicio DateTime @default(now())
+  fechaEntrega DateTime?
+  estado      String   @default("Pendiente") // Pendiente, En Proceso, Completada, Cancelada
+  materialesRequeridos String? // texto libre o relación simplificada
+  maquinas    AsignacionMaquina[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Modelo intermedio: Asignación de máquinas a órdenes
+model AsignacionMaquina {
+  id         Int      @id @default(autoincrement())
+  ordenId    Int
+  maquinaId  Int
+  orden      OrdenTrabajo @relation(fields: [ordenId], references: [id])
+  maquina    Maquina      @relation(fields: [maquinaId], references: [id])
+  horasUso   Float?
+  createdAt  DateTime @default(now())
+}
+
+model Venta {
+  id        Int      @id @default(autoincrement())
+  numeroOrden String @unique
+  clienteId Int
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  cantidadPiezas Int
+  moneda    String   // "USD" o "MXN"
+  montoTotal Float   // sin IVA
+  iva       Float    // calculado automáticamente
+  totalConIva Float  // montoTotal + iva
+  facturacion String  @default("No facturado") // "No facturado", "Facturado", "Facturado parcialmente"
+  pago      String   @default("Pendiente")     // "Pendiente", "Pagado"
+  avisoFacturar Boolean @default(true)         // true si no está facturado, false si ya está facturado (se gestiona automáticamente)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  fechaCreacion DateTime @default(now())
+  fechaEntrega DateTime
+  facturas Factura[]
+  estado    String   @default("Activa") // "Activa", "Cancelada"
+}
+
+model Factura {
+  id        Int      @id @default(autoincrement())
+  ventaId   Int
+  venta     Venta    @relation(fields: [ventaId], references: [id])
+  numeroFactura String @unique
+  monto     Float
+  fecha     DateTime @default(now())
+  cancelada Boolean  @default(false)
+  motivoCancelacion String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  pago      Pago?    // una factura tiene un pago opcional (algunas facturas pueden no estar pagadas aún)
+}
+
+model Pago {
+  id          Int      @id @default(autoincrement())
+  facturaId   Int      @unique  // un pago pertenece a una sola factura (relación uno a uno)
+  factura     Factura  @relation(fields: [facturaId], references: [id])
+  fecha       DateTime @default(now())
+  medio       String   // "Transferencia", "Efectivo", "Cheque", etc.
+  seguimiento String?  // número de transferencia, cheque, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PurchaseRequest {
+  id                    Int      @id @default(autoincrement())
+  solicitante           String
+  proyecto              String
+  material              String
+  dibujo                String?
+  ancho                 Float?
+  largo                 Float?
+  grosor                Float?
+  diametro              Float?
+  fechaRequerida        DateTime
+  descripcion           String?
+  numeroPiezas          Int
+  directriz             String   @default("esperar") // "comprar", "cancelar", "esperar"
+  proveedor1            String?
+  proveedor2            String?
+  proveedor3            String?
+  proveedorElegido      String?
+  dimensionesCotizadas  String?
+  propuestaAlternativa  String?
+  tiempoEntrega         String?
+  fechaCompra           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
