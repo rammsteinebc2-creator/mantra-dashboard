@@ -18,6 +18,9 @@ RUN cd frontend && npm install
 COPY backend ./backend
 COPY frontend ./frontend
 
+# Generar el cliente Prisma (necesario para producción)
+RUN cd backend && npx prisma generate
+
 # Construir el frontend (React)
 RUN cd frontend && npm run build
 
