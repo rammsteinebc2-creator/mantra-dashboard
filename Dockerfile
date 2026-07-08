@@ -35,3 +35,8 @@ ENV NODE_ENV=production
 
 # Comando para ejecutar el backend
 CMD ["node", "backend/index.js"]
+
+# Mostrar contenido del directorio para depuración
+RUN ls -la /app/backend
+RUN ls -la /app/backend/prisma
+RUN ls -la /app/backend/node_modules/.prisma/client
