@@ -727,6 +727,37 @@ app.delete('/api/ventas/:id/pdf', verificarToken, verificarRol(['admin', 'ventas
   }
 });
 
+// ===== DESCARGAR PDF DE UNA VENTA =====
+app.get('/api/ventas/:id/pdf', verificarToken, verificarRol(['admin', 'ventas', 'facturacion']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const venta = await prisma.venta.findUnique({ where: { id: parseInt(id) } });
+    if (!venta) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+    if (!venta.pdfUrl) {
+      return res.status(404).json({ error: 'Esta venta no tiene PDF asociado' });
+    }
+
+    // Construir la ruta absoluta del archivo
+    const filePath = path.join(__dirname, 'uploads', path.basename(venta.pdfUrl));
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'El archivo PDF no existe en el servidor' });
+    }
+
+    // Servir el archivo como descarga
+    res.sendFile(filePath, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${path.basename(filePath)}"`
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);

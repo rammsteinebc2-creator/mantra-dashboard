@@ -465,14 +465,14 @@ const handleEliminarPdf = async (id) => {
       {venta.pdfUrl ? (
         <div className="flex items-center justify-center gap-2">
           <a
-            href={venta.pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline text-sm"
-            title="Descargar PDF"
-          >
-            📄 Ver
-          </a>
+  href={`/api/ventas/${venta.id}/pdf`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-blue-600 hover:underline text-sm"
+  title="Descargar PDF"
+>
+  📄 Ver
+</a>
           <button
             onClick={() => handleEliminarPdf(venta.id)}
             className="text-red-600 hover:underline text-sm"
