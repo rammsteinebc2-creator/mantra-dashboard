@@ -464,15 +464,16 @@ const handleEliminarPdf = async (id) => {
     <>
       {venta.pdfUrl ? (
         <div className="flex items-center justify-center gap-2">
-          <a
-  href={`/api/ventas/${venta.id}/pdf`}
-  target="_blank"
-  rel="noopener noreferrer"
+          <button
+  onClick={() => {
+    const token = localStorage.getItem('token');
+    window.open(`/api/ventas/${venta.id}/pdf?token=${token}`, '_blank');
+  }}
   className="text-blue-600 hover:underline text-sm"
   title="Descargar PDF"
 >
   📄 Ver
-</a>
+</button>
           <button
             onClick={() => handleEliminarPdf(venta.id)}
             className="text-red-600 hover:underline text-sm"

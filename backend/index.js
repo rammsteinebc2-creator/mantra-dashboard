@@ -728,8 +728,20 @@ app.delete('/api/ventas/:id/pdf', verificarToken, verificarRol(['admin', 'ventas
 });
 
 // ===== DESCARGAR PDF DE UNA VENTA =====
-app.get('/api/ventas/:id/pdf', verificarToken, verificarRol(['admin', 'ventas', 'facturacion']), async (req, res) => {
+app.get('/api/ventas/:id/pdf', async (req, res) => {
+  // Verificar token desde header o query
+  let token = req.headers.authorization?.split(' ')[1] || req.query.token;
+  if (!token) {
+    return res.status(401).json({ error: 'Token no proporcionado' });
+  }
   try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    // Opcional: verificar que el usuario tenga rol adecuado (puedes agregar verificarRol si quieres)
+    const usuario = decoded;
+    if (!usuario) {
+      return res.status(401).json({ error: 'Token inválido' });
+    }
+    // Continuar con la lógica
     const { id } = req.params;
     const venta = await prisma.venta.findUnique({ where: { id: parseInt(id) } });
     if (!venta) {
@@ -738,14 +750,10 @@ app.get('/api/ventas/:id/pdf', verificarToken, verificarRol(['admin', 'ventas', 
     if (!venta.pdfUrl) {
       return res.status(404).json({ error: 'Esta venta no tiene PDF asociado' });
     }
-
-    // Construir la ruta absoluta del archivo
     const filePath = path.join(__dirname, 'uploads', path.basename(venta.pdfUrl));
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ error: 'El archivo PDF no existe en el servidor' });
     }
-
-    // Servir el archivo como descarga
     res.sendFile(filePath, {
       headers: {
         'Content-Type': 'application/pdf',
