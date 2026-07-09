@@ -26,6 +26,7 @@ const Ventas = () => {
   const [empresas, setEmpresas] = useState([]);
 const [empresaFiltro, setEmpresaFiltro] = useState('');
   const [sending, setSending] = useState(false);
+  const [pdfFile, setPdfFile] = useState(null);
 
   // Estados para edición
   const [editandoId, setEditandoId] = useState(null);
@@ -116,26 +117,34 @@ const cargarEmpresas = async () => {
     }
     setSending(true);
     try {
-      await crearVenta({
-        ...formData,
-        clienteId: parseInt(formData.clienteId),
-        cantidadPiezas: parseInt(formData.cantidadPiezas),
-        montoTotal: parseFloat(formData.montoTotal),
-        fechaEntrega: formData.fechaEntrega,
-      });
-      setMostrarForm(false);
-      setFormData({
-        numeroOrden: '',
-        clienteId: '',
-        cantidadPiezas: 1,
-        moneda: 'MXN',
-        montoTotal: '',
-        iva: 0,
-        totalConIva: 0,
-        fechaEntrega: '',
-        facturacion: 'No facturado',
-        pago: 'Pendiente'
-      });
+      const nuevaVenta = await crearVenta({
+  ...formData,
+  clienteId: parseInt(formData.clienteId),
+  cantidadPiezas: parseInt(formData.cantidadPiezas),
+  montoTotal: parseFloat(formData.montoTotal),
+  fechaEntrega: formData.fechaEntrega,
+});
+
+// Si se seleccionó un PDF, subirlo a la venta recién creada
+if (pdfFile && nuevaVenta.id) {
+  await subirPdfVenta(nuevaVenta.id, pdfFile);
+}
+
+setMostrarForm(false);
+setFormData({
+  numeroOrden: '',
+  clienteId: '',
+  cantidadPiezas: 1,
+  moneda: 'MXN',
+  montoTotal: '',
+  iva: 0,
+  totalConIva: 0,
+  fechaEntrega: '',
+  facturacion: 'No facturado',
+  pago: 'Pendiente'
+});
+setPdfFile(null); // Limpiar el input de PDF
+await cargarVentas();
       await cargarVentas();
     } catch (err) {
       alert('Error al crear venta: ' + (err.response?.data?.error || err.message));
@@ -387,6 +396,15 @@ const handleEliminarPdf = async (id) => {
                 <label className="block text-sm font-medium">Fecha de Entrega *</label>
                 <input type="date" name="fechaEntrega" value={formData.fechaEntrega} onChange={handleChange} className="w-full border rounded px-3 py-2" required />
               </div>
+              <div>
+  <label className="block text-sm font-medium">PDF (Opcional)</label>
+  <input
+    type="file"
+    accept="application/pdf"
+    onChange={(e) => setPdfFile(e.target.files[0])}
+    className="w-full border rounded px-3 py-2"
+  />
+</div>
             </div>
             <button type="submit" disabled={sending} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
               {sending ? 'Guardando...' : 'Guardar Venta'}
