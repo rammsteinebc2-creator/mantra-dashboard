@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -12,7 +12,7 @@ import Facturaciones from './pages/Facturaciones';
 import RutaProtegida from './components/RutaProtegida';
 import Usuarios from './pages/Usuarios';
 import Compras from './pages/Compras';
-import logo from './assets/logo.png'; // Ajusta la ruta según tu archivo
+import logo from './assets/logo.png';
 
 function App() {
   const [usuario, setUsuario] = useState(null);
@@ -23,6 +23,43 @@ function App() {
     compras: false,
     rh: false
   });
+
+  // Referencias para los temporizadores de cada menú
+  const timers = useRef({
+    ventas: null,
+    ordenes: null,
+    compras: null,
+    rh: null
+  });
+
+  // Función para abrir un menú (limpia el temporizador de cierre)
+  const abrirMenu = (nombre) => {
+    if (timers.current[nombre]) {
+      clearTimeout(timers.current[nombre]);
+      timers.current[nombre] = null;
+    }
+    setMenuAbierto(prev => ({ ...prev, [nombre]: true }));
+  };
+
+  // Función para cerrar un menú con retraso de 2 segundos
+  const cerrarMenuConDelay = (nombre) => {
+    if (timers.current[nombre]) {
+      clearTimeout(timers.current[nombre]);
+    }
+    timers.current[nombre] = setTimeout(() => {
+      setMenuAbierto(prev => ({ ...prev, [nombre]: false }));
+      timers.current[nombre] = null;
+    }, 2000);
+  };
+
+  // Función para cerrar un menú inmediatamente (al hacer clic)
+  const cerrarMenuInmediato = (nombre) => {
+    if (timers.current[nombre]) {
+      clearTimeout(timers.current[nombre]);
+      timers.current[nombre] = null;
+    }
+    setMenuAbierto(prev => ({ ...prev, [nombre]: false }));
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -60,10 +97,8 @@ function App() {
         <nav className="bg-blue-600 text-white p-3">
           <div className="container mx-auto flex flex-wrap justify-between items-center">
             <div className="flex items-center gap-6 flex-wrap">
-              {/* Logo */}
               <img src={logo} alt="Logo" className="h-16 w-auto" />
 
-              {/* Dashboard - enlace directo */}
               {puedeVer(['admin', 'ventas', 'facturacion', 'produccion', 'supervisor']) && (
                 <Link to="/" className="px-3 py-1 rounded-md bg-blue-700 hover:bg-blue-800 transition-colors self-center">Dashboard</Link>
               )}
@@ -72,8 +107,8 @@ function App() {
               {(puedeVer(['admin', 'ventas', 'facturacion'])) && (
                 <div
                   className="relative"
-                  onMouseEnter={() => setMenuAbierto(prev => ({ ...prev, ventas: true }))}
-                  onMouseLeave={() => setMenuAbierto(prev => ({ ...prev, ventas: false }))}
+                  onMouseEnter={() => abrirMenu('ventas')}
+                  onMouseLeave={() => cerrarMenuConDelay('ventas')}
                 >
                   <button className="px-3 py-1 rounded-md bg-blue-700 hover:bg-blue-800 transition-colors self-center">
                     Ventas
@@ -81,20 +116,20 @@ function App() {
                   {menuAbierto.ventas && (
                     <div
                       className="absolute left-0 top-full mt-1 w-48 bg-white text-black rounded shadow-lg overflow-hidden z-20"
-                      onMouseEnter={() => setMenuAbierto(prev => ({ ...prev, ventas: true }))}
-                      onMouseLeave={() => setMenuAbierto(prev => ({ ...prev, ventas: false }))}
+                      onMouseEnter={() => abrirMenu('ventas')}
+                      onMouseLeave={() => cerrarMenuConDelay('ventas')}
                     >
                       {puedeVer(['admin', 'ventas', 'facturacion']) && (
-                        <Link to="/ventas" className="block px-4 py-2 hover:bg-gray-100">Previsión de Ventas</Link>
+                        <Link to="/ventas" className="block px-4 py-2 hover:bg-gray-100" onClick={() => cerrarMenuInmediato('ventas')}>Previsión de Ventas</Link>
                       )}
                       {puedeVer(['admin', 'facturacion']) && (
-                        <Link to="/facturaciones" className="block px-4 py-2 hover:bg-gray-100">Facturaciones</Link>
+                        <Link to="/facturaciones" className="block px-4 py-2 hover:bg-gray-100" onClick={() => cerrarMenuInmediato('ventas')}>Facturaciones</Link>
                       )}
                       {puedeVer(['admin', 'ventas', 'facturacion']) && (
-                        <Link to="/clientes" className="block px-4 py-2 hover:bg-gray-100">Clientes</Link>
+                        <Link to="/clientes" className="block px-4 py-2 hover:bg-gray-100" onClick={() => cerrarMenuInmediato('ventas')}>Clientes</Link>
                       )}
                       {puedeVer(['admin', 'ventas', 'facturacion']) && (
-                        <Link to="/empresas" className="block px-4 py-2 hover:bg-gray-100">Empresas</Link>
+                        <Link to="/empresas" className="block px-4 py-2 hover:bg-gray-100" onClick={() => cerrarMenuInmediato('ventas')}>Empresas</Link>
                       )}
                     </div>
                   )}
@@ -105,8 +140,8 @@ function App() {
               {(puedeVer(['admin', 'ventas', 'facturacion', 'produccion', 'supervisor'])) && (
                 <div
                   className="relative"
-                  onMouseEnter={() => setMenuAbierto(prev => ({ ...prev, ordenes: true }))}
-                  onMouseLeave={() => setMenuAbierto(prev => ({ ...prev, ordenes: false }))}
+                  onMouseEnter={() => abrirMenu('ordenes')}
+                  onMouseLeave={() => cerrarMenuConDelay('ordenes')}
                 >
                   <button className="px-3 py-1 rounded-md bg-blue-700 hover:bg-blue-800 transition-colors self-center">
                     Órdenes de trabajo
@@ -114,14 +149,14 @@ function App() {
                   {menuAbierto.ordenes && (
                     <div
                       className="absolute left-0 top-full mt-1 w-48 bg-white text-black rounded shadow-lg overflow-hidden z-20"
-                      onMouseEnter={() => setMenuAbierto(prev => ({ ...prev, ordenes: true }))}
-                      onMouseLeave={() => setMenuAbierto(prev => ({ ...prev, ordenes: false }))}
+                      onMouseEnter={() => abrirMenu('ordenes')}
+                      onMouseLeave={() => cerrarMenuConDelay('ordenes')}
                     >
                       {puedeVer(['admin', 'ventas', 'facturacion', 'produccion', 'supervisor']) && (
-                        <Link to="/ordenes" className="block px-4 py-2 hover:bg-gray-100">Órdenes</Link>
+                        <Link to="/ordenes" className="block px-4 py-2 hover:bg-gray-100" onClick={() => cerrarMenuInmediato('ordenes')}>Órdenes</Link>
                       )}
                       {puedeVer(['admin', 'supervisor']) && (
-                        <Link to="/maquinas" className="block px-4 py-2 hover:bg-gray-100">Máquinas</Link>
+                        <Link to="/maquinas" className="block px-4 py-2 hover:bg-gray-100" onClick={() => cerrarMenuInmediato('ordenes')}>Máquinas</Link>
                       )}
                       <span className="block px-4 py-2 text-gray-400 cursor-not-allowed">Proyectos (próximamente)</span>
                     </div>
@@ -133,8 +168,8 @@ function App() {
               {(puedeVer(['admin', 'compras', 'supervisor'])) && (
                 <div
                   className="relative"
-                  onMouseEnter={() => setMenuAbierto(prev => ({ ...prev, compras: true }))}
-                  onMouseLeave={() => setMenuAbierto(prev => ({ ...prev, compras: false }))}
+                  onMouseEnter={() => abrirMenu('compras')}
+                  onMouseLeave={() => cerrarMenuConDelay('compras')}
                 >
                   <button className="px-3 py-1 rounded-md bg-blue-700 hover:bg-blue-800 transition-colors self-center">
                     Compras
@@ -142,11 +177,11 @@ function App() {
                   {menuAbierto.compras && (
                     <div
                       className="absolute left-0 top-full mt-1 w-48 bg-white text-black rounded shadow-lg overflow-hidden z-20"
-                      onMouseEnter={() => setMenuAbierto(prev => ({ ...prev, compras: true }))}
-                      onMouseLeave={() => setMenuAbierto(prev => ({ ...prev, compras: false }))}
+                      onMouseEnter={() => abrirMenu('compras')}
+                      onMouseLeave={() => cerrarMenuConDelay('compras')}
                     >
                       {puedeVer(['admin', 'compras', 'supervisor']) && (
-                        <Link to="/compras" className="block px-4 py-2 hover:bg-gray-100">Gestión de compras</Link>
+                        <Link to="/compras" className="block px-4 py-2 hover:bg-gray-100" onClick={() => cerrarMenuInmediato('compras')}>Gestión de compras</Link>
                       )}
                       <span className="block px-4 py-2 text-gray-400 cursor-not-allowed">Proveedores (próximamente)</span>
                       <span className="block px-4 py-2 text-gray-400 cursor-not-allowed">Gestión de pagos (próximamente)</span>
@@ -159,8 +194,8 @@ function App() {
               {puedeVer(['admin']) && (
                 <div
                   className="relative"
-                  onMouseEnter={() => setMenuAbierto(prev => ({ ...prev, rh: true }))}
-                  onMouseLeave={() => setMenuAbierto(prev => ({ ...prev, rh: false }))}
+                  onMouseEnter={() => abrirMenu('rh')}
+                  onMouseLeave={() => cerrarMenuConDelay('rh')}
                 >
                   <button className="px-3 py-1 rounded-md bg-blue-700 hover:bg-blue-800 transition-colors self-center">
                     RH
@@ -168,17 +203,16 @@ function App() {
                   {menuAbierto.rh && (
                     <div
                       className="absolute left-0 top-full mt-1 w-48 bg-white text-black rounded shadow-lg overflow-hidden z-20"
-                      onMouseEnter={() => setMenuAbierto(prev => ({ ...prev, rh: true }))}
-                      onMouseLeave={() => setMenuAbierto(prev => ({ ...prev, rh: false }))}
+                      onMouseEnter={() => abrirMenu('rh')}
+                      onMouseLeave={() => cerrarMenuConDelay('rh')}
                     >
-                      <Link to="/usuarios" className="block px-4 py-2 hover:bg-gray-100">Usuarios</Link>
+                      <Link to="/usuarios" className="block px-4 py-2 hover:bg-gray-100" onClick={() => cerrarMenuInmediato('rh')}>Usuarios</Link>
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Usuario y logout */}
             <div className="flex items-center gap-4">
               <span className="text-sm">{usuario.nombre || usuario.email} ({usuario.rol})</span>
               <button onClick={handleLogout} className="bg-red-500 px-3 py-1 rounded text-sm hover:bg-red-600">Cerrar sesión</button>
