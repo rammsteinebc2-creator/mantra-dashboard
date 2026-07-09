@@ -49,7 +49,7 @@ function App() {
     timers.current[nombre] = setTimeout(() => {
       setMenuAbierto(prev => ({ ...prev, [nombre]: false }));
       timers.current[nombre] = null;
-    }, 2000);
+    }, 500);
   };
 
   // Función para cerrar un menú inmediatamente (al hacer clic)
