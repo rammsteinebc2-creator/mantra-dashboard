@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getClientes, getVentas, crearVenta, editarVenta, cancelarVenta, getEmpresas } from '../services/api';
+import { subirPdfVenta, eliminarPdfVenta } from '../services/api';
 
 const Ventas = () => {
   const [ventas, setVentas] = useState([]);
@@ -203,6 +204,27 @@ const cargarEmpresas = async () => {
     }
   };
 
+  // Funciones para manejar PDF
+const handleSubirPdf = async (id, file) => {
+  if (!file) return;
+  try {
+    await subirPdfVenta(id, file);
+    await cargarVentas();
+  } catch (err) {
+    alert('Error al subir PDF: ' + (err.response?.data?.error || err.message));
+  }
+};
+
+const handleEliminarPdf = async (id) => {
+  if (!window.confirm('¿Eliminar el PDF asociado a esta venta?')) return;
+  try {
+    await eliminarPdfVenta(id);
+    await cargarVentas();
+  } catch (err) {
+    alert('Error al eliminar PDF: ' + (err.response?.data?.error || err.message));
+  }
+};
+
   const getFacturacionClass = (estado) => {
     if (estado === 'Cancelada') return 'bg-gray-400 text-white';
     switch (estado) {
@@ -389,13 +411,14 @@ const cargarEmpresas = async () => {
               <th className="border px-4 py-2">Pago</th>
               <th className="border px-4 py-2">Fecha Creación</th>
               <th className="border px-4 py-2">Fecha Entrega</th>
+              <th className="border px-4 py-2">PDF</th>
               <th className="border px-4 py-2">Acciones</th>
             </tr>
           </thead>
           <tbody>
   {ventasFiltradas.length === 0 ? (
     <tr>
-      <td colSpan="12" className="text-center py-4">No hay ventas para los filtros seleccionados.</td>
+      <td colSpan="13" className="text-center py-4">No hay ventas para los filtros seleccionados.</td>
     </tr>
   ) : (
     ventasFiltradas.map(venta => {
@@ -414,16 +437,61 @@ const cargarEmpresas = async () => {
           <td className="border px-4 py-2"><div className={getPagoClass(venta.pago)}>{venta.pago}</div></td>
           <td className="border px-4 py-2">{formatDate(venta.fechaCreacion)}</td>
           <td className={`border px-4 py-2 ${entregaVencida && !cancelada ? 'bg-red-100 font-semibold' : ''}`}>
-            {formatDate(venta.fechaEntrega)}
-          </td>
-          <td className="border px-4 py-2 text-center">
-            {!cancelada && (
-              <div className="flex justify-center gap-2">
-                <button onClick={() => abrirEdicion(venta)} className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600">Editar</button>
-                <button onClick={() => confirmarCancelar(venta.id)} className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700">Cancelar</button>
-              </div>
-            )}
-          </td>
+  {formatDate(venta.fechaEntrega)}
+</td>
+
+{/* Celda PDF */}
+<td className="border px-4 py-2 text-center">
+  {!cancelada && (
+    <>
+      {venta.pdfUrl ? (
+        <div className="flex items-center justify-center gap-2">
+          <a
+            href={venta.pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:underline text-sm"
+            title="Descargar PDF"
+          >
+            📄 Ver
+          </a>
+          <button
+            onClick={() => handleEliminarPdf(venta.id)}
+            className="text-red-600 hover:underline text-sm"
+            title="Eliminar PDF"
+          >
+            ❌
+          </button>
+        </div>
+      ) : (
+        <>
+          <button
+            onClick={() => document.getElementById(`pdf-upload-${venta.id}`).click()}
+            className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+          >
+            Subir PDF
+          </button>
+          <input
+            type="file"
+            id={`pdf-upload-${venta.id}`}
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => handleSubirPdf(venta.id, e.target.files[0])}
+          />
+        </>
+      )}
+    </>
+  )}
+</td>
+
+<td className="border px-4 py-2 text-center">
+  {!cancelada && (
+    <div className="flex justify-center gap-2">
+      <button onClick={() => abrirEdicion(venta)} className="bg-yellow-500 text-white px-2 py-1 rounded text-xs hover:bg-yellow-600">Editar</button>
+      <button onClick={() => confirmarCancelar(venta.id)} className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700">Cancelar</button>
+    </div>
+  )}
+</td>
         </tr>
       );
     })

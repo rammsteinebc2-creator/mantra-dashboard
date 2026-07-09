@@ -156,3 +156,18 @@ export const getUsuariosSimple = async () => {
 };
 
 export default api;
+
+// PDF para ventas
+export const subirPdfVenta = async (id, file) => {
+  const formData = new FormData();
+  formData.append('pdf', file);
+  const response = await api.post(`/ventas/${id}/pdf`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
+  return response.data;
+};
+
+export const eliminarPdfVenta = async (id) => {
+  const response = await api.delete(`/ventas/${id}/pdf`);
+  return response.data;
+};

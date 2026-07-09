@@ -1,33 +1,11 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl", "debian-openssl-1.1.x"]
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-model Empresa {
-  id        Int      @id @default(autoincrement())
-  nombre    String   @unique
-  direccion String?
-  telefono  String?
-  email     String?
-  clientes  Cliente[]
-  activo    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Usuario {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String   // hash almacenado
-  nombre    String?
-   rol       String   @default("usuario") // "admin", "ventas", "facturacion", "almacen", "compras", "produccion", "supervisor"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model Cliente {
@@ -45,29 +23,38 @@ model Cliente {
   updatedAt DateTime @updatedAt
 }
 
-// Modelo: Material (inventario)
+model Empresa {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  direccion String?
+  telefono  String?
+  email     String?
+  clientes  Cliente[]
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Material {
-  id        Int    @id @default(autoincrement())
-  nombre    String @unique
-  stock     Int    @default(0) // cantidad disponible
-  unidad    String // ej: "kg", "unidades", "metros"
-  bajoStock Int?   // stock mínimo para alerta
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  stock     Int      @default(0)
+  unidad    String
+  bajoStock Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-// Modelo: Máquina/Herramienta
 model Maquina {
-  id        Int    @id @default(autoincrement())
-  nombre    String @unique
+  id          Int      @id @default(autoincrement())
+  nombre      String   @unique
   descripcion String?
-  disponible Boolean @default(true)
+  disponible  Boolean  @default(true)
   asignaciones AsignacionMaquina[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
-// Modelo: Orden de Trabajo
 model OrdenTrabajo {
   id          Int      @id @default(autoincrement())
   numeroOrden String   @unique
@@ -77,14 +64,13 @@ model OrdenTrabajo {
   cantidad    Int
   fechaInicio DateTime @default(now())
   fechaEntrega DateTime?
-  estado      String   @default("Pendiente") // Pendiente, En Proceso, Completada, Cancelada
-  materialesRequeridos String? // texto libre o relación simplificada
+  estado      String   @default("Pendiente")
+  materialesRequeridos String?
   maquinas    AsignacionMaquina[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-// Modelo intermedio: Asignación de máquinas a órdenes
 model AsignacionMaquina {
   id         Int      @id @default(autoincrement())
   ordenId    Int
@@ -96,49 +82,60 @@ model AsignacionMaquina {
 }
 
 model Venta {
-  id        Int      @id @default(autoincrement())
-  numeroOrden String @unique
-  clienteId Int
-  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  id          Int      @id @default(autoincrement())
+  numeroOrden String   @unique
+  clienteId   Int
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
   cantidadPiezas Int
-  moneda    String   // "USD" o "MXN"
-  montoTotal Float   // sin IVA
-  iva       Float    // calculado automáticamente
-  totalConIva Float  // montoTotal + iva
-  facturacion String  @default("No facturado") // "No facturado", "Facturado", "Facturado parcialmente"
-  pago      String   @default("Pendiente")     // "Pendiente", "Pagado"
-  avisoFacturar Boolean @default(true)         // true si no está facturado, false si ya está facturado (se gestiona automáticamente)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  moneda      String
+  montoTotal  Float
+  iva         Float
+  totalConIva Float
   fechaCreacion DateTime @default(now())
   fechaEntrega DateTime
-  facturas Factura[]
-  estado    String   @default("Activa") // "Activa", "Cancelada"
+  facturacion String  @default("No facturado")
+  pago        String  @default("Pendiente")
+  avisoFacturar Boolean @default(true)
+  estado      String  @default("Activa")
+  pdfUrl      String?   // ← NUEVO CAMPO PARA PDF
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  facturas    Factura[]
 }
 
 model Factura {
-  id        Int      @id @default(autoincrement())
-  ventaId   Int
-  venta     Venta    @relation(fields: [ventaId], references: [id])
-  numeroFactura String @unique
-  monto     Float
-  fecha     DateTime @default(now())
-  cancelada Boolean  @default(false)
+  id               Int      @id @default(autoincrement())
+  ventaId          Int
+  venta            Venta    @relation(fields: [ventaId], references: [id])
+  numeroFactura    String   @unique
+  monto            Float
+  fecha            DateTime @default(now())
+  cancelada        Boolean  @default(false)
   motivoCancelacion String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  pago      Pago?    // una factura tiene un pago opcional (algunas facturas pueden no estar pagadas aún)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  pago             Pago?
 }
 
 model Pago {
   id          Int      @id @default(autoincrement())
-  facturaId   Int      @unique  // un pago pertenece a una sola factura (relación uno a uno)
+  facturaId   Int      @unique
   factura     Factura  @relation(fields: [facturaId], references: [id])
   fecha       DateTime @default(now())
-  medio       String   // "Transferencia", "Efectivo", "Cheque", etc.
-  seguimiento String?  // número de transferencia, cheque, etc.
+  medio       String
+  seguimiento String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  nombre    String?
+  rol       String   @default("usuario")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model PurchaseRequest {
@@ -154,7 +151,7 @@ model PurchaseRequest {
   fechaRequerida        DateTime
   descripcion           String?
   numeroPiezas          Int
-  directriz             String   @default("esperar") // "comprar", "cancelar", "esperar"
+  directriz             String   @default("esperar")
   proveedor1            String?
   proveedor2            String?
   proveedor3            String?

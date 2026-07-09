@@ -627,6 +627,106 @@ app.use((req, res, next) => {
   res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
+// ===== CONFIGURACIÓN DE MULTER (subida de archivos PDF) =====
+const multer = require('multer');
+
+// Configurar almacenamiento en disco
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, 'uploads');
+    // Crear la carpeta si no existe
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Nombre único: timestamp + número de orden + extensión
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `venta-${req.params.id}-${uniqueSuffix}${ext}`);
+  }
+});
+
+// Filtro para solo aceptar PDFs
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype === 'application/pdf') {
+    cb(null, true);
+  } else {
+    cb(new Error('Solo se permiten archivos PDF'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB máximo
+  fileFilter: fileFilter
+});
+
+// Servir archivos estáticos desde la carpeta uploads (para descargar)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// ===== SUBIR PDF PARA UNA VENTA =====
+app.post('/api/ventas/:id/pdf', verificarToken, verificarRol(['admin', 'ventas', 'facturacion']), upload.single('pdf'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const venta = await prisma.venta.findUnique({ where: { id: parseInt(id) } });
+    if (!venta) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No se subió ningún archivo PDF' });
+    }
+
+    // Guardar la ruta del archivo en la base de datos (relativa)
+    const pdfUrl = `/uploads/${req.file.filename}`;
+    const ventaActualizada = await prisma.venta.update({
+      where: { id: parseInt(id) },
+      data: { pdfUrl },
+      include: { cliente: { include: { empresa: true } } }
+    });
+
+    res.json(ventaActualizada);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ===== ELIMINAR PDF DE UNA VENTA =====
+app.delete('/api/ventas/:id/pdf', verificarToken, verificarRol(['admin', 'ventas', 'facturacion']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const venta = await prisma.venta.findUnique({ where: { id: parseInt(id) } });
+    if (!venta) {
+      return res.status(404).json({ error: 'Venta no encontrada' });
+    }
+
+    if (!venta.pdfUrl) {
+      return res.status(400).json({ error: 'Esta venta no tiene PDF asociado' });
+    }
+
+    // Eliminar el archivo físico del servidor
+    const filePath = path.join(__dirname, 'uploads', path.basename(venta.pdfUrl));
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Actualizar la base de datos
+    const ventaActualizada = await prisma.venta.update({
+      where: { id: parseInt(id) },
+      data: { pdfUrl: null },
+      include: { cliente: { include: { empresa: true } } }
+    });
+
+    res.json(ventaActualizada);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
